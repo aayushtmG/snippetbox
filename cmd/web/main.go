@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+
 	"github.com/aayushtmG/snippetbox/internal/models"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -15,6 +17,7 @@ type application struct {
 	errLog *log.Logger
 	infoLog *log.Logger
 	snippets *models.SnippetModel
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -33,11 +36,16 @@ func main() {
 	}
 	defer db.Close()
 
-	
+	templateCache, err := newTemplateCache()	
+	if err != nil {
+		errLog.Fatal(err)
+	}
+
 	app := &application{
 		infoLog: infoLog,
 		errLog: errLog,
 		snippets: &models.SnippetModel{DB:db },
+		templateCache: templateCache,
 	}
 
 	srv := &http.Server{
