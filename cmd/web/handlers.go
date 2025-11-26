@@ -12,10 +12,10 @@ import (
 )
 
 type snippetCreateForm struct {
-	Title string
-	Content string
-	Expires int
-	validator.Validator
+	Title string `form:"title"`
+	Expires int `form:"expires"`
+	Content string `form:"content"`
+validator.Validator `form:"-"`
 }
 
 
@@ -52,8 +52,12 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	flash := app.sessionManager.PopString(r.Context(),"flash")
+
 	data := app.newTemplateData(r)
 	data.Snippet = snippet
+	data.Flash = flash
 
 
 	app.render(w,http.StatusOK,"view.tmpl",data)
@@ -69,24 +73,13 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	
-	err := r.ParseForm()
-	if err != nil {
-		app.clientError(w,http.StatusBadRequest)
-		return 
-	}
 
-	//parsing and checking expires data
-	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	var form snippetCreateForm
+
+	err := app.decodePostForm(r,&form)
 	if err != nil {
-		app.clientError(w,http.StatusBadRequest)
+		app.clientError(w,http.StatusBadRequest)	
 		return
-	}
-
-	form := snippetCreateForm{
-		Title: r.PostForm.Get("title"),
-		Content: r.PostForm.Get("content"),
-		Expires: expires,
 	}
 
 	//validating
@@ -109,6 +102,9 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		app.serverError(w,err)	
 		return
 	}
+
+	app.sessionManager.Put(r.Context(),"flash","Snippet created successfully")
+
 	http.Redirect(w,r,fmt.Sprintf("/snippet/view/%d",id),http.StatusSeeOther)
 }
 
